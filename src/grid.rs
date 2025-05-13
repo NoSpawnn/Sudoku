@@ -6,11 +6,11 @@ pub enum Error {
     ValueOutOfRange(u8),
 }
 
-pub struct Board {
+pub struct Grid {
     pub cells: Vec<Cell>,
 }
 
-impl Board {
+impl Grid {
     const ROW_COUNT: usize = 9;
     const COL_COUNT: usize = 9;
     const CELL_COUNT: usize = Self::ROW_COUNT * Self::COL_COUNT;
@@ -21,6 +21,18 @@ impl Board {
         Self {
             cells: vec![Cell::Empty; Self::CELL_COUNT],
         }
+    }
+
+    pub fn new_random() -> Self {
+        let mut cells = Vec::with_capacity(Self::CELL_COUNT);
+
+        for row in 0..Self::ROW_COUNT {
+            for col in 0..Self::COL_COUNT {
+                // ??
+            }
+        }
+
+        Self { cells }
     }
 
     pub fn set_cell(&mut self, row: usize, col: usize, value: u8) -> Result<(), Error> {
@@ -41,7 +53,7 @@ impl Board {
     }
 }
 
-impl Display for Board {
+impl Display for Grid {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f)?;
         write!(f, " ")?;

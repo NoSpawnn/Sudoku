@@ -1,12 +1,12 @@
-mod board;
+mod grid;
 
-use board::Board;
+use grid::Grid;
 
-fn main() -> Result<(), board::Error> {
-    let mut board = Board::new_empty();
-    board.set_cell(8, 8, 9)?;
-    board.set_cell(3, 4, 1)?;
-    println!("{}", board);
+fn main() -> Result<(), grid::Error> {
+    let mut grid = Grid::new_empty();
+    grid.set_cell(8, 8, 9)?;
+    grid.set_cell(3, 4, 1)?;
+    println!("{}", grid);
 
     Ok(())
 }
