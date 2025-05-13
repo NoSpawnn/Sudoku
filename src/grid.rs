@@ -41,7 +41,31 @@ impl Grid {
         grid
     }
 
-    fn solve(&mut self) {
+    pub fn from(data: &[[u8; Self::COL_COUNT]; Self::ROW_COUNT]) -> Self {
+        let mut grid = Grid::new_empty();
+
+        for (row_idx, row) in data.iter().enumerate() {
+            for (col_idx, value) in row.iter().enumerate() {
+                let value = *value;
+                if value != 0 {
+                    match grid.set_cell(
+                        Coordinate {
+                            row: row_idx,
+                            col: col_idx,
+                        },
+                        CellState::Filled(value),
+                    ) {
+                        Ok(_) => continue,
+                        Err(e) => panic!("{:?}", e),
+                    }
+                }
+            }
+        }
+
+        grid
+    }
+
+    pub fn solve(&mut self) {
         const MAX_RECURSE: usize = 20_000_000; // Kinda arbitrary, but an ok safety net
 
         let nums: Vec<u8> = (Self::MIN_CELL_VALUE..=Self::MAX_CELL_VALUE).collect();
