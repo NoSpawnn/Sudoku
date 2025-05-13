@@ -6,7 +6,7 @@ pub enum Error {
     ValueOutOfRange(u8),
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Coordinate {
     pub row: usize,
     pub col: usize,
@@ -51,11 +51,13 @@ impl Grid {
             return Err(Error::ValueOutOfRange(value));
         }
 
-        Ok(
-            self.cells[row * Self::COL_COUNT..(row + 1) * Self::COL_COUNT]
-                .iter()
-                .all(|c| !matches!(c, Cell::Filled(v) if *v == value)),
-        )
+        Ok(self.can_place_in_row_unchecked(row, value))
+    }
+
+    fn can_place_in_row_unchecked(&self, row: usize, value: u8) -> bool {
+        self.cells[row * Self::COL_COUNT..(row + 1) * Self::COL_COUNT]
+            .iter()
+            .all(|c| !matches!(c, Cell::Filled(v) if *v == value))
     }
 
     pub fn can_place_in_column(&self, col: usize, value: u8) -> Result<bool, Error> {
@@ -65,16 +67,19 @@ impl Grid {
             return Err(Error::ValueOutOfRange(value));
         }
 
-        Ok(self
-            .cells
+        Ok(self.can_place_in_column_unchecked(col, value))
+    }
+
+    fn can_place_in_column_unchecked(&self, col: usize, value: u8) -> bool {
+        self.cells
             .iter()
             .skip(col)
             .step_by(Self::COL_COUNT)
-            .all(|c| !matches!(c, Cell::Filled(v) if *v == value)))
+            .all(|c| !matches!(c, Cell::Filled(v) if *v == value))
     }
 
     pub fn can_place_in_subgrid(&self, c: Coordinate, value: u8) -> Result<bool, Error> {
-        let start = Grid::get_subgrid_start(c)?;
+        let start = Grid::get_subgrid_start(&c)?;
 
         for sub_row in start.row..start.row + Self::SUBGRID_ROWS {
             for sub_col in start.col..start.col + Self::SUBGRID_COLS {
@@ -91,7 +96,40 @@ impl Grid {
             }
         }
 
-        Ok(true)
+        Ok(self.can_place_in_subgrid_unchecked(c, value))
+    }
+
+    fn can_place_in_subgrid_unchecked(&self, c: Coordinate, value: u8) -> bool {
+        let start = Grid::get_subgrid_start_unchecked(&c);
+
+        for sub_row in start.row..start.row + Self::SUBGRID_ROWS {
+            for sub_col in start.col..start.col + Self::SUBGRID_COLS {
+                match self
+                    .cell_at(Coordinate {
+                        row: sub_row,
+                        col: sub_col,
+                    })
+                    .unwrap()
+                {
+                    Cell::Filled(current) if *current == value => return false,
+                    _ => continue,
+                }
+            }
+        }
+
+        true
+    }
+
+    pub fn can_place_at(&self, c: Coordinate, value: u8) -> Result<bool, Error> {
+        if c.row >= Self::ROW_COUNT || c.col >= Self::COL_COUNT {
+            return Err(Error::CellIndexOutOfRange(c));
+        } else if value <= Self::MIN_CELL_VALUE || value > Self::MAX_CELL_VALUE {
+            return Err(Error::ValueOutOfRange(value));
+        }
+
+        Ok(self.can_place_in_column_unchecked(c.col, value)
+            && self.can_place_in_row_unchecked(c.row, value)
+            && self.can_place_in_subgrid_unchecked(c, value))
     }
 
     pub fn cell_at(&self, c: Coordinate) -> Result<&Cell, Error> {
@@ -99,18 +137,26 @@ impl Grid {
             return Err(Error::CellIndexOutOfRange(c));
         }
 
-        Ok(&self.cells[c.row * Self::COL_COUNT + c.col])
+        Ok(self.cell_at_unchecked(c))
     }
 
-    pub fn get_subgrid_start(c: Coordinate) -> Result<Coordinate, Error> {
+    pub fn cell_at_unchecked(&self, c: Coordinate) -> &Cell {
+        &self.cells[c.row * Self::COL_COUNT + c.col]
+    }
+
+    pub fn get_subgrid_start(c: &Coordinate) -> Result<Coordinate, Error> {
         if c.row >= Self::ROW_COUNT || c.col >= Self::COL_COUNT {
-            return Err(Error::CellIndexOutOfRange(c));
+            return Err(Error::CellIndexOutOfRange(c.clone()));
         }
 
-        Ok(Coordinate {
+        Ok(Grid::get_subgrid_start_unchecked(c))
+    }
+
+    fn get_subgrid_start_unchecked(c: &Coordinate) -> Coordinate {
+        Coordinate {
             row: c.row / Self::SUBGRID_ROWS * Self::SUBGRID_ROWS,
             col: c.col / Self::SUBGRID_COLS * Self::SUBGRID_COLS,
-        })
+        }
     }
 
     pub fn set_cell(&mut self, c: Coordinate, value: u8) -> Result<(), Error> {
@@ -120,14 +166,10 @@ impl Grid {
             return Err(Error::ValueOutOfRange(value));
         }
 
-        self.set_cell_unchecked(c, value);
-
-        Ok(())
-    }
-
-    fn set_cell_unchecked(&mut self, c: Coordinate, value: u8) {
         let idx = c.row * Self::COL_COUNT + c.col;
         self.cells[idx] = Cell::Filled(value);
+
+        Ok(())
     }
 }
 
@@ -179,7 +221,7 @@ mod test {
         for (c, e) in tests {
             let c = Coordinate { row: c.0, col: c.1 };
             let expected = Coordinate { row: e.0, col: e.1 };
-            match Grid::get_subgrid_start(c) {
+            match Grid::get_subgrid_start(&c) {
                 Ok(actual) => assert_eq!(actual, expected),
                 Err(_) => unreachable!(),
             }
