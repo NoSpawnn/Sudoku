@@ -36,9 +36,14 @@ impl Grid {
     }
 
     pub fn new_random() -> Self {
+        let mut grid = Grid::new_empty();
+        grid.solve();
+        grid
+    }
+
+    fn solve(&mut self) {
         const MAX_RECURSE: usize = 20_000_000; // Kinda arbitrary, but an ok safety net
 
-        let mut grid = Grid::new_empty();
         let nums: Vec<u8> = (Self::MIN_CELL_VALUE..=Self::MAX_CELL_VALUE).collect();
         let mut rng = rand::rng();
 
@@ -46,12 +51,13 @@ impl Grid {
             grid: &mut Grid,
             nums: Vec<u8>,
             rng: &mut impl rand::Rng,
-            counter: &mut usize,
+            recurse_counter: &mut usize,
         ) -> bool {
-            *counter += 1;
-            if *counter >= MAX_RECURSE {
+            *recurse_counter += 1;
+            if *recurse_counter >= MAX_RECURSE {
                 panic!("Failed to generate random grid in {} attempts", MAX_RECURSE);
             }
+
             let coord = match grid
                 .cells
                 .iter()
@@ -67,7 +73,7 @@ impl Grid {
                 let num = *num;
                 if matches!(grid.can_place_at(coord, num), Ok(true)) {
                     grid.set_cell_unchecked(coord, CellState::Filled(num));
-                    if fill(grid, nums.clone(), rng, counter) {
+                    if fill(grid, nums.clone(), rng, recurse_counter) {
                         return true;
                     }
                     grid.set_cell_unchecked(coord, CellState::Empty);
@@ -77,14 +83,12 @@ impl Grid {
             false
         }
 
-        let mut counter = 0;
+        let mut recurse_counter = 0;
         loop {
-            if fill(&mut grid, nums.clone(), &mut rng, &mut counter) {
+            if fill(self, nums.clone(), &mut rng, &mut recurse_counter) {
                 break;
             }
         }
-
-        grid
     }
 
     pub fn can_place_in_row(&self, row: usize, value: u8) -> Result<bool, Error> {
