@@ -2,8 +2,14 @@ use std::fmt::{Debug, Display};
 
 #[derive(Debug)]
 pub enum Error {
-    CellIndexOutOfRange { row: usize, col: usize },
+    CellIndexOutOfRange(Coordinate),
     ValueOutOfRange(u8),
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct Coordinate {
+    row: usize,
+    col: usize,
 }
 
 pub struct Grid {
@@ -37,31 +43,31 @@ impl Grid {
         Self { cells }
     }
 
-    pub fn get_subgrid_start(row: usize, col: usize) -> Result<(usize, usize), Error> {
-        if row >= Self::ROW_COUNT || col >= Self::COL_COUNT {
-            return Err(Error::CellIndexOutOfRange { row, col });
+    pub fn get_subgrid_start(c: Coordinate) -> Result<Coordinate, Error> {
+        if c.row >= Self::ROW_COUNT || c.col >= Self::COL_COUNT {
+            return Err(Error::CellIndexOutOfRange(c));
         }
 
-        Ok((
-            row / Self::SUBGRID_ROWS * Self::SUBGRID_ROWS,
-            col / Self::SUBGRID_COLS * Self::SUBGRID_COLS,
-        ))
+        Ok(Coordinate {
+            row: c.row / Self::SUBGRID_ROWS * Self::SUBGRID_ROWS,
+            col: c.col / Self::SUBGRID_COLS * Self::SUBGRID_COLS,
+        })
     }
 
-    pub fn set_cell(&mut self, row: usize, col: usize, value: u8) -> Result<(), Error> {
-        if row >= Self::ROW_COUNT || col >= Self::COL_COUNT {
-            return Err(Error::CellIndexOutOfRange { row, col });
+    pub fn set_cell(&mut self, c: Coordinate, value: u8) -> Result<(), Error> {
+        if c.row >= Self::ROW_COUNT || c.col >= Self::COL_COUNT {
+            return Err(Error::CellIndexOutOfRange(c));
         } else if value <= Self::MIN_CELL_VALUE || value > Self::MAX_CELL_VALUE {
             return Err(Error::ValueOutOfRange(value));
         }
 
-        self.set_cell_unchecked(row, col, value);
+        self.set_cell_unchecked(c, value);
 
         Ok(())
     }
 
-    fn set_cell_unchecked(&mut self, row: usize, col: usize, value: u8) {
-        let idx = row * Self::COL_COUNT + col;
+    fn set_cell_unchecked(&mut self, c: Coordinate, value: u8) {
+        let idx = c.row * Self::COL_COUNT + c.col;
         self.cells[idx] = Cell::Filled(value);
     }
 }
@@ -70,7 +76,7 @@ impl Display for Grid {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f)?;
         write!(f, " ")?;
-        for i in 1..Self::COL_COUNT + 1 {
+        for i in 1..=Self::COL_COUNT {
             write!(f, "{i:4}")?;
         }
 
@@ -111,8 +117,10 @@ mod test {
             ((8, 8), (6, 6)),
         ];
 
-        for (coordinate, expected) in tests {
-            match Grid::get_subgrid_start(coordinate.0, coordinate.1) {
+        for (c, e) in tests {
+            let c = Coordinate { row: c.0, col: c.1 };
+            let expected = Coordinate { row: e.0, col: e.1 };
+            match Grid::get_subgrid_start(c) {
                 Ok(actual) => assert_eq!(actual, expected),
                 Err(_) => unreachable!(),
             }
