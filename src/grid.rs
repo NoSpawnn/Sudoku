@@ -8,8 +8,8 @@ pub enum Error {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Coordinate {
-    row: usize,
-    col: usize,
+    pub row: usize,
+    pub col: usize,
 }
 
 pub struct Grid {
@@ -41,6 +41,35 @@ impl Grid {
         }
 
         Self { cells }
+    }
+
+    pub fn can_place_in_row(&self, row: usize, value: u8) -> Result<bool, Error> {
+        if row >= Self::ROW_COUNT {
+            return Err(Error::CellIndexOutOfRange(Coordinate { row: row, col: 0 }));
+        } else if value <= Self::MIN_CELL_VALUE || value > Self::MAX_CELL_VALUE {
+            return Err(Error::ValueOutOfRange(value));
+        }
+
+        Ok(
+            self.cells[row * Self::COL_COUNT..(row + 1) * Self::COL_COUNT]
+                .iter()
+                .all(|c| !matches!(c, Cell::Filled(v) if *v == value)),
+        )
+    }
+
+    pub fn can_place_in_column(&self, col: usize, value: u8) -> Result<bool, Error> {
+        if col >= Self::COL_COUNT {
+            return Err(Error::CellIndexOutOfRange(Coordinate { row: 0, col: col }));
+        } else if value <= Self::MIN_CELL_VALUE || value > Self::MAX_CELL_VALUE {
+            return Err(Error::ValueOutOfRange(value));
+        }
+
+        Ok(self
+            .cells
+            .iter()
+            .skip(col)
+            .step_by(Self::COL_COUNT)
+            .all(|c| !matches!(c, Cell::Filled(v) if *v == value)))
     }
 
     pub fn get_subgrid_start(c: Coordinate) -> Result<Coordinate, Error> {
@@ -97,7 +126,7 @@ impl Display for Grid {
     }
 }
 
-#[derive(Default, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
 pub enum Cell {
     #[default]
     Empty,
@@ -125,5 +154,24 @@ mod test {
                 Err(_) => unreachable!(),
             }
         }
+    }
+
+    #[test]
+    fn test_can_place_in_row() {
+        let mut grid = Grid::new_empty();
+        let _ = grid.set_cell(Coordinate { row: 0, col: 0 }, 1);
+        assert!(!grid.can_place_in_row(0, 1).unwrap());
+        let _ = grid.set_cell(Coordinate { row: 0, col: 8 }, 9);
+        assert!(!grid.can_place_in_row(0, 9).unwrap());
+        assert!(grid.can_place_in_row(0, 8).unwrap());
+    }
+    #[test]
+    fn test_can_place_in_column() {
+        let mut grid = Grid::new_empty();
+        let _ = grid.set_cell(Coordinate { row: 0, col: 0 }, 1);
+        assert!(!grid.can_place_in_column(0, 1).unwrap());
+        let _ = grid.set_cell(Coordinate { row: 6, col: 0 }, 9);
+        assert!(!grid.can_place_in_column(0, 9).unwrap());
+        assert!(grid.can_place_in_column(0, 8).unwrap());
     }
 }
