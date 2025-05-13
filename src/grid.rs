@@ -36,13 +36,22 @@ impl Grid {
     }
 
     pub fn new_random() -> Self {
-        const MAX_RECURSE: usize = 20_000_000;
+        const MAX_RECURSE: usize = 20_000_000; // Kinda arbitrary, but an ok safety net
 
         let mut grid = Grid::new_empty();
         let nums: Vec<u8> = (Self::MIN_CELL_VALUE..=Self::MAX_CELL_VALUE).collect();
         let mut rng = rand::rng();
 
-        fn fill(grid: &mut Grid, nums: Vec<u8>, rng: &mut impl rand::Rng) -> bool {
+        fn fill(
+            grid: &mut Grid,
+            nums: Vec<u8>,
+            rng: &mut impl rand::Rng,
+            counter: &mut usize,
+        ) -> bool {
+            *counter += 1;
+            if *counter >= MAX_RECURSE {
+                panic!("Failed to generate random grid in {} attempts", MAX_RECURSE);
+            }
             let coord = match grid
                 .cells
                 .iter()
@@ -57,24 +66,25 @@ impl Grid {
             for num in &shuffled {
                 let num = *num;
                 if matches!(grid.can_place_at(coord, num), Ok(true)) {
-                    grid.set_cell(coord, CellState::Filled(num));
-                    if fill(grid, nums.clone(), rng) {
+                    grid.set_cell_unchecked(coord, CellState::Filled(num));
+                    if fill(grid, nums.clone(), rng, counter) {
                         return true;
                     }
-                    grid.set_cell(coord, CellState::Empty);
+                    grid.set_cell_unchecked(coord, CellState::Empty);
                 }
             }
 
             false
         }
 
-        for _ in 0..MAX_RECURSE {
-            if fill(&mut grid, nums.clone(), &mut rng) {
-                return grid;
+        let mut counter = 0;
+        loop {
+            if fill(&mut grid, nums.clone(), &mut rng, &mut counter) {
+                break;
             }
         }
 
-        panic!("Failed to generate random grid in {} attempts", MAX_RECURSE)
+        grid
     }
 
     pub fn can_place_in_row(&self, row: usize, value: u8) -> Result<bool, Error> {
@@ -191,10 +201,14 @@ impl Grid {
             }
         }
 
-        let idx = c.row * Self::COL_COUNT + c.col;
-        self.cells[idx].state = state;
+        self.set_cell_unchecked(c, state);
 
         Ok(())
+    }
+
+    pub fn set_cell_unchecked(&mut self, c: Coordinate, state: CellState) {
+        let idx = c.row * Self::COL_COUNT + c.col;
+        self.cells[idx].state = state;
     }
 }
 
