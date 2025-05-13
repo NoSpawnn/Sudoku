@@ -11,8 +11,10 @@ pub struct Grid {
 }
 
 impl Grid {
-    const ROW_COUNT: usize = 9;
-    const COL_COUNT: usize = 9;
+    const SUBGRID_ROWS: usize = 3;
+    const SUBGRID_COLS: usize = 3;
+    const ROW_COUNT: usize = Self::SUBGRID_ROWS * 3;
+    const COL_COUNT: usize = Self::SUBGRID_ROWS * 3;
     const CELL_COUNT: usize = Self::ROW_COUNT * Self::COL_COUNT;
     const MIN_CELL_VALUE: u8 = 0;
     const MAX_CELL_VALUE: u8 = 9;
@@ -33,6 +35,17 @@ impl Grid {
         }
 
         Self { cells }
+    }
+
+    pub fn get_subgrid_start(row: usize, col: usize) -> Result<(usize, usize), Error> {
+        if row >= Self::ROW_COUNT || col >= Self::COL_COUNT {
+            return Err(Error::CellIndexOutOfRange { row, col });
+        }
+
+        Ok((
+            row / Self::SUBGRID_ROWS * Self::SUBGRID_ROWS,
+            col / Self::SUBGRID_COLS * Self::SUBGRID_COLS,
+        ))
     }
 
     pub fn set_cell(&mut self, row: usize, col: usize, value: u8) -> Result<(), Error> {
@@ -83,4 +96,26 @@ pub enum Cell {
     #[default]
     Empty,
     Filled(u8),
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_get_subgrid_start() {
+        let tests: Vec<((usize, usize), (usize, usize))> = vec![
+            ((0, 0), (0, 0)),
+            ((1, 1), (0, 0)),
+            ((4, 4), (3, 3)),
+            ((8, 8), (6, 6)),
+        ];
+
+        for (coordinate, expected) in tests {
+            match Grid::get_subgrid_start(coordinate.0, coordinate.1) {
+                Ok(actual) => assert_eq!(actual, expected),
+                Err(_) => unreachable!(),
+            }
+        }
+    }
 }
