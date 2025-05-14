@@ -14,14 +14,14 @@ pub struct Grid {
 }
 
 impl Grid {
-    const SUBGRID_ROWS: usize = 3;
-    const SUBGRID_COLS: usize = 3;
-    const SUBGRID_COUNT: usize = 3;
-    const ROW_COUNT: usize = Self::SUBGRID_ROWS * Self::SUBGRID_COUNT;
-    const COL_COUNT: usize = Self::SUBGRID_COLS * Self::SUBGRID_COUNT;
-    const CELL_COUNT: usize = Self::ROW_COUNT * Self::COL_COUNT;
-    const MIN_CELL_VALUE: u8 = 1;
-    const MAX_CELL_VALUE: u8 = 9;
+    pub const SUBGRID_ROWS: usize = 3;
+    pub const SUBGRID_COLS: usize = 3;
+    pub const SUBGRID_COUNT: usize = 3;
+    pub const ROW_COUNT: usize = Self::SUBGRID_ROWS * Self::SUBGRID_COUNT;
+    pub const COL_COUNT: usize = Self::SUBGRID_COLS * Self::SUBGRID_COUNT;
+    pub const CELL_COUNT: usize = Self::ROW_COUNT * Self::COL_COUNT;
+    pub const MIN_CELL_VALUE: u8 = 1;
+    pub const MAX_CELL_VALUE: u8 = 9;
 
     pub fn new_empty() -> Self {
         let cells = (0..Self::ROW_COUNT)
@@ -61,7 +61,7 @@ impl Grid {
     }
 
     pub fn solve(&mut self) {
-        const MAX_RECURSE: usize = 20_000_000; // Kinda arbitrary, but an ok safety net
+        const MAX_RECURSE: usize = 20_000; // Kinda arbitrary, but an ok safety net
 
         let nums: Vec<u8> = (Self::MIN_CELL_VALUE..=Self::MAX_CELL_VALUE).collect();
         let mut rng = rand::rng();
@@ -73,9 +73,9 @@ impl Grid {
             recurse_counter: &mut usize,
         ) -> bool {
             *recurse_counter += 1;
-            if *recurse_counter >= MAX_RECURSE {
-                panic!("Failed to generate random grid in {} attempts", MAX_RECURSE);
-            }
+            // if *recurse_counter >= MAX_RECURSE {
+            //     panic!("Failed to generate random grid in {} attempts", MAX_RECURSE);
+            // }
 
             let coord = match grid
                 .cells
@@ -200,6 +200,18 @@ impl Grid {
         &self.cells[c.row * Self::COL_COUNT + c.col]
     }
 
+    pub fn cell_at_mut(&mut self, c: Coordinate) -> Result<&mut Cell, Error> {
+        if c.row >= Self::ROW_COUNT || c.col >= Self::COL_COUNT {
+            return Err(Error::CellIndexOutOfRange(c));
+        }
+
+        Ok(self.cell_at_mut_unchecked(c))
+    }
+
+    pub fn cell_at_mut_unchecked(&mut self, c: Coordinate) -> &mut Cell {
+        &mut self.cells[c.row * Self::COL_COUNT + c.col]
+    }
+
     pub fn get_subgrid_start(c: &Coordinate) -> Result<Coordinate, Error> {
         if c.row >= Self::ROW_COUNT || c.col >= Self::COL_COUNT {
             return Err(Error::CellIndexOutOfRange(c.clone()));
@@ -233,6 +245,16 @@ impl Grid {
         let idx = c.row * Self::COL_COUNT + c.col;
         self.cells[idx].state = state;
     }
+
+    pub fn set_cell_solver_modifiable(
+        &mut self,
+        c: Coordinate,
+        solver_modifiable: bool,
+    ) -> Result<(), Error> {
+        let cell = self.cell_at_mut(c)?;
+        cell.solver_modifiable = solver_modifiable;
+        Ok(())
+    }
 }
 
 impl Display for Grid {
@@ -260,6 +282,12 @@ impl Display for Grid {
     }
 }
 
+impl Default for Grid {
+    fn default() -> Self {
+        Self::new_empty()
+    }
+}
+
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
 pub enum CellState {
     #[default]
@@ -269,8 +297,9 @@ pub enum CellState {
 
 #[derive(Debug, Clone, Copy)]
 pub struct Cell {
-    coordinate: Coordinate,
-    state: CellState,
+    pub coordinate: Coordinate,
+    pub state: CellState,
+    pub solver_modifiable: bool,
 }
 
 impl Cell {
@@ -278,6 +307,7 @@ impl Cell {
         Self {
             coordinate: Coordinate { row, col },
             state: CellState::default(),
+            solver_modifiable: true,
         }
     }
 }
