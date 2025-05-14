@@ -61,7 +61,7 @@ impl Grid {
     }
 
     pub fn solve(&mut self) {
-        const MAX_RECURSE: usize = 20_000; // Kinda arbitrary, but an ok safety net
+        const MAX_RECURSE: usize = 20_000_000; // Kinda arbitrary, but an ok safety net
 
         let nums: Vec<u8> = (Self::MIN_CELL_VALUE..=Self::MAX_CELL_VALUE).collect();
         let mut rng = rand::rng();
@@ -73,9 +73,9 @@ impl Grid {
             recurse_counter: &mut usize,
         ) -> bool {
             *recurse_counter += 1;
-            // if *recurse_counter >= MAX_RECURSE {
-            //     panic!("Failed to generate random grid in {} attempts", MAX_RECURSE);
-            // }
+            if *recurse_counter >= MAX_RECURSE {
+                panic!("Failed to generate random grid in {} attempts", MAX_RECURSE);
+            }
 
             let coord = match grid
                 .cells
