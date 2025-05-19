@@ -29,7 +29,9 @@ enum Message {
 
 impl Program {
     pub fn run() -> iced::Result {
-        iced::run("Sudoku", Program::update, Program::view)
+        iced::application("Sudoku", Program::update, Program::view)
+            .theme(|_| Program::theme())
+            .run()
     }
 
     fn update(&mut self, message: Message) {
@@ -108,5 +110,9 @@ impl Program {
         .width(30)
         .align_x(Alignment::Center)
         .into()
+    }
+
+    fn theme() -> iced::Theme {
+        iced::Theme::Dark
     }
 }
